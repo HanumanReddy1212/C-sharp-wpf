@@ -1,0 +1,170 @@
+using System;
+using System.Drawing;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using Microsoft.Win32;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
+using Color = System.Windows.Media.Color;
+using Image = System.Windows.Controls.Image;
+using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using Point = System.Windows.Point;
+using Size = System.Windows.Size;
+
+namespace WpfApp1
+{
+    public partial class MainWindow : Window
+    {
+        private bool isDragging;
+        private Point startPoint;
+        private Point initialMousePosition;
+        private Brush currentBrush;
+        private Rectangle currentRectangle;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+            currentBrush = Brushes.Red;
+        }
+
+        private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                isDragging = true;
+                startPoint = e.GetPosition(canvas);
+                currentRectangle = new Rectangle
+                {
+                    Stroke = currentBrush,
+                    StrokeThickness = 2,
+                    Fill = Brushes.Transparent,
+                };
+                Canvas.SetLeft(currentRectangle, startPoint.X);
+                Canvas.SetTop(currentRectangle, startPoint.Y);
+                canvas.Children.Add(currentRectangle);
+            }
+        }
+
+        private void Canvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (isDragging)
+            {
+                Point currentPosition = e.GetPosition(canvas);
+
+                double width = Math.Abs(currentPosition.X - startPoint.X);
+                double height = Math.Abs(currentPosition.Y - startPoint.Y);
+
+                if (currentPosition.X < startPoint.X)
+                {
+                    Canvas.SetLeft(currentRectangle, currentPosition.X);
+                }
+                if (currentPosition.Y < startPoint.Y)
+                {
+                    Canvas.SetTop(currentRectangle, currentPosition.Y);
+                }
+
+                currentRectangle.Width = width;
+                currentRectangle.Height = height;
+            }
+        }
+
+        private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (isDragging)
+            {
+                isDragging = false;
+                currentRectangle.Stroke = currentBrush;
+            }
+        }
+
+        private void Canvas_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (isDragging && e.LeftButton == MouseButtonState.Pressed)
+            {
+                // Cancel the drag operation.
+                canvas.Children.Remove(currentRectangle);
+                isDragging = false;
+            }
+        }
+
+        private void ColorButton_Click(object sender, RoutedEventArgs e)
+        {
+            var colorDialog = new System.Windows.Forms.ColorDialog();
+            if (colorDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                currentBrush = new SolidColorBrush(Color.FromArgb(colorDialog.Color.A, colorDialog.Color.R, colorDialog.Color.G, colorDialog.Color.B));
+            }
+        }
+
+        private void Canvas_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            var rectangle = e.Source as Rectangle;
+            if (rectangle != null)
+            {
+                canvas.Children.Remove(rectangle);
+            }
+        }
+
+        private void Canvas_MouseDown_1(object sender, MouseButtonEventArgs e)
+        {
+            initialMousePosition = e.GetPosition(canvas);
+            var rectangle = e.Source as Rectangle;
+            if (rectangle != null)
+            {
+                currentRectangle = rectangle;
+            }
+        }
+
+        private void Canvas_MouseMove_1(object sender, MouseEventArgs e)
+        {
+            if (currentRectangle != null && e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point currentPosition = e.GetPosition(canvas);
+                double deltaX = currentPosition.X - initialMousePosition.X;
+                double deltaY = currentPosition.Y - initialMousePosition.Y;
+
+                currentRectangle.SetValue(Canvas.LeftProperty, Canvas.GetLeft(currentRectangle) + deltaX);
+                currentRectangle.SetValue(Canvas.TopProperty, Canvas.GetTop(currentRectangle) + deltaY);
+                            initialMousePosition = currentPosition;
+        }
+    }
+
+    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    {
+        var saveFileDialog = new SaveFileDialog();
+        saveFileDialog.Filter = "PNG Image|*.png";
+        if (saveFileDialog.ShowDialog() == true)
+        {
+            Size imageSize = new Size(canvas.ActualWidth, canvas.ActualHeight);
+            canvas.Measure(imageSize);
+            canvas.Arrange(new Rect(imageSize));
+
+            var bitmap = new RenderTargetBitmap((int)canvas.ActualWidth, (int)canvas.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(canvas);
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using (var fileStream = new FileStream(saveFileDialog.FileName, FileMode.Create))
+            {
+                encoder.Save(fileStream);
+            }
+        }
+    }
+
+    private void LoadButton_Click(object sender, RoutedEventArgs e)
+    {
+        var openFileDialog = new OpenFileDialog();
+        openFileDialog.Filter = "Image files (*.jpg, *.jpeg, *.png) | *.jpg; *.jpeg; *.png";
+        if (openFileDialog.ShowDialog() == true)
+        {
+            var bitmap = new BitmapImage(new Uri(openFileDialog.FileName));
+            image.Source = bitmap;
+            canvas.Background = new ImageBrush(bitmap);
+        }
+    }
+}
+

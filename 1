@@ -1,0 +1,536 @@
+//Select and load an image
+private void LoadImage()
+{
+    OpenFileDialog openFileDialog = new OpenFileDialog();
+    openFileDialog.Filter = "Image Files(*.png; *.jpg; *.jpeg; *.bmp)|*.png; *.jpg; *.jpeg; *.bmp";
+
+    if (openFileDialog.ShowDialog() == true)
+    {
+        string filePath = openFileDialog.FileName;
+        BitmapImage bitmap = new BitmapImage(new Uri(filePath));
+        Image image = new Image();
+        image.Source = bitmap;
+        canvas.Children.Clear();
+        canvas.Children.Add(image);
+    }
+}
+
+//Draw one rectangle or more over the image by clicking and dragging the mouse to draw
+private Rectangle currentRectangle;
+
+private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
+{
+    if (e.ChangedButton == MouseButton.Left)
+    {
+        Point startPoint = e.GetPosition(canvas);
+        currentRectangle = new Rectangle();
+        currentRectangle.Stroke = Brushes.Red;
+        currentRectangle.StrokeThickness = 2;
+        currentRectangle.Width = 0;
+        currentRectangle.Height = 0;
+        Canvas.SetLeft(currentRectangle, startPoint.X);
+        Canvas.SetTop(currentRectangle, startPoint.Y);
+        canvas.Children.Add(currentRectangle);
+    }
+}
+
+private void Canvas_MouseMove(object sender, MouseEventArgs e)
+{
+    if (currentRectangle != null)
+    {
+        Point endPoint = e.GetPosition(canvas);
+        double width = Math.Abs(endPoint.X - Canvas.GetLeft(currentRectangle));
+        double height = Math.Abs(endPoint.Y - Canvas.GetTop(currentRectangle));
+        currentRectangle.Width = width;
+        currentRectangle.Height = height;
+    }
+}
+
+private void Canvas_MouseUp(object sender, MouseButtonEventArgs e)
+{
+currentRectangle = null;
+}
+
+
+//Only allow drawing inside the picture:
+
+private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
+{
+    if (e.ChangedButton == MouseButton.Left)
+    {
+        Point startPoint = e.GetPosition(canvas);
+        if (startPoint.X >= 0 && startPoint.X <= canvas.ActualWidth &&
+            startPoint.Y >= 0 && startPoint.Y <= canvas.ActualHeight)
+        {
+            // draw the rectangle
+        }
+    }
+}
+
+//Change the rectangle's color by clicking each rectangle and selecting a different color from a color palette
+private void Rectangle_MouseUp(object sender, MouseButtonEventArgs e)
+{
+    if (e.ChangedButton == MouseButton.Left)
+    {
+        Rectangle rectangle = sender as Rectangle;
+        if (rectangle != null)
+        {
+            ColorDialog colorDialog = new ColorDialog();
+            if (colorDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                SolidColorBrush brush = new SolidColorBrush(Color.FromArgb(colorDialog.Color.A, colorDialog.Color.R, colorDialog.Color.G, colorDialog.Color.B));
+                rectangle.Fill = brush;
+            }
+        }
+    }
+}
+
+//Resize the rectangle(s) from any corner or side
+private enum ResizeMode
+{
+    None,
+    Left,
+    Top,
+    Right,
+    Bottom,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight
+}
+
+private Rectangle currentRectangle;
+private ResizeMode resizeMode;
+private Point startPoint;
+
+private void Rectangle_MouseDown(object sender, MouseButtonEventArgs e)
+{
+    if (e.ChangedButton == MouseButton.Left)
+    {
+        Rectangle rectangle = sender as Rectangle;
+        if (rectangle != null)
+        {
+            Point mousePosition = e.GetPosition(rectangle);
+            double width = rectangle.ActualWidth;
+            double height = rectangle.ActualHeight;
+            if (mousePosition.X <= 5 && mousePosition.Y <= 5)
+            {
+                resizeMode = ResizeMode.TopLeft;
+            }
+            else if (mousePosition.X >= width - 5 && mousePosition.Y <= 5)
+            {
+                resizeMode = ResizeMode.TopRight;
+            }
+            else if (mousePosition.X <= 5 && mousePosition.Y >= height - 5)
+            {
+                resizeMode = ResizeMode.BottomLeft;
+            }
+            else if (mousePosition.X >= width - 5 && mousePosition.Y >= height - 5)
+            {
+                resizeMode = ResizeMode.BottomRight;
+            }
+            else if (mousePosition.X <= 5)
+            {
+                resizeMode = ResizeMode.Left;
+            }
+            else if (mousePosition.X >= width - 5)
+            {
+                resizeMode = ResizeMode.Right;
+            }
+            else if (mousePosition.Y <= 5)
+            {
+                resizeMode = ResizeMode.Top;
+            }
+            else if (mousePosition.Y >= height - 5)
+            {
+                resizeMode = ResizeMode.Bottom;
+            }
+            else
+            {
+                resizeMode = ResizeMode.None;
+            }
+            startPoint = e.GetPosition(canvas);
+            currentRectangle = rectangle;
+        }
+    }
+}
+
+private void Canvas_MouseMove(object sender, MouseEventArgs e)
+{
+    if (currentRectangle != null && resizeMode != ResizeMode.None)
+    {
+        Point endPoint = e.GetPosition(canvas);
+        double deltaX = endPoint.X - startPoint.X;
+        double deltaY = endPoint.Y - startPoint.Y;
+        switch (resizeMode)
+        {
+            case ResizeMode.Left:
+                currentRectangle.Width -= deltaX;
+                Canvas.SetLeft(currentRectangle, Canvas.GetLeft(currentRectangle) + deltaX);
+                break;
+            case ResizeMode.Top:
+                currentRectangle.Height -= deltaY;
+                Canvas.SetTop(currentRectangle, Canvas.GetTop(currentRectangle)+deltaY);
+                break;
+            case ResizeMode.Right:
+            currentRectangle.Width += deltaX;
+            break;
+            case ResizeMode.Bottom:
+            currentRectangle.Height += deltaY;
+            break;
+            case ResizeMode.TopLeft:
+            currentRectangle.Width -= deltaX;
+            Canvas.SetLeft(currentRectangle, Canvas.GetLeft(currentRectangle) + deltaX);
+            currentRectangle.Height -= deltaY;
+            Canvas.SetTop(currentRectangle, Canvas.GetTop(currentRectangle) + deltaY);
+            break;
+            case ResizeMode.TopRight:
+            currentRectangle.Width += deltaX;
+            currentRectangle.Height -= deltaY;
+            Canvas.SetTop(currentRectangle, Canvas.GetTop(currentRectangle) + deltaY);
+            break;
+            case ResizeMode.BottomLeft:
+            currentRectangle.Width -= deltaX;
+            Canvas.SetLeft(currentRectangle, Canvas.GetLeft(currentRectangle) + deltaX);
+            currentRectangle.Height += deltaY;
+            break;
+            case ResizeMode.BottomRight:
+            currentRectangle.Width += deltaX;
+            currentRectangle.Height += deltaY;
+            break;
+        }
+            startPoint = endPoint;
+    }
+}
+
+
+// Move the rectangle by pressing and holding the rectangle and moving the mouse (drag and drop)
+
+
+private bool isDragging = false;
+
+private void Rectangle_MouseDown(object sender, MouseButtonEventArgs e)
+{
+    if (e.ChangedButton == MouseButton.Left)
+    {
+        isDragging = true;
+        startPoint = e.GetPosition(canvas);
+        currentRectangle = sender as Rectangle;
+        Canvas.SetZIndex(currentRectangle, canvas.Children.Count);
+    }
+}
+
+private void Canvas_MouseMove(object sender, MouseEventArgs e)
+{
+    if (isDragging && currentRectangle != null)
+    {
+        Point endPoint = e.GetPosition(canvas);
+        double deltaX = endPoint.X - startPoint.X;
+        double deltaY = endPoint.Y - startPoint.Y;
+        Canvas.SetLeft(currentRectangle, Canvas.GetLeft(currentRectangle) + deltaX);
+        Canvas.SetTop(currentRectangle, Canvas.GetTop(currentRectangle) + deltaY);
+        startPoint = endPoint;
+    }
+}
+
+private void Rectangle_MouseUp(object sender, MouseButtonEventArgs e)
+{
+    if (e.ChangedButton == MouseButton.Left)
+    {
+        isDragging = false;
+    }
+}
+
+//Delete any rectangle
+private void Rectangle_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+{
+    Rectangle rectangle = sender as Rectangle;
+    if (rectangle != null)
+    {
+        canvas.Children.Remove(rectangle);
+    }
+}
+
+//Save the changes to a new image
+private void SaveButton_Click(object sender, RoutedEventArgs e)
+{
+    if (canvas.Children.Count > 0)
+    {
+        Rect bounds = VisualTreeHelper.GetDescendantBounds(canvas);
+        RenderTargetBitmap bitmap = new RenderTargetBitmap((int)bounds.Width, (int)bounds.Height, 96, 96, PixelFormats.Default);
+        DrawingVisual visual = new DrawingVisual();
+        using (DrawingContext context = visual.RenderOpen())
+        {
+            VisualBrush brush = new VisualBrush(canvas);
+            context.DrawRectangle(brush, null, new Rect(new Point(), bounds.Size));
+        }
+        bitmap.Render(visual);
+        BitmapEncoder encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        SaveFileDialog dialog = new SaveFileDialog();
+        dialog.Filter = "PNG files (*.png)|*.png";
+        if (dialog.ShowDialog() == true)
+        {
+            using (Stream stream = dialog.OpenFile())
+            {
+                encoder.Save(stream);
+            }
+        }
+    }
+}
+
+// MainWindow.xaml.cs file
+using Microsoft.Win32;
+using System;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+
+namespace WpfApplication1
+{
+    public partial class MainWindow : Window
+    {
+        private Point startPoint;
+        private Rectangle currentRectangle;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+
+        private void Canvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            startPoint = e.GetPosition(canvas);
+            currentRectangle = new Rectangle()
+            {
+                Stroke = Brushes.Black,
+                StrokeThickness = 2,
+                Fill = Brushes.Transparent
+            };
+            Canvas.SetLeft(currentRectangle, startPoint.X);
+            Canvas.SetTop(currentRectangle, startPoint.Y);
+            canvas.Children.Add(currentRectangle);
+            Canvas.SetZIndex(currentRectangle, canvas.Children.Count);
+        }
+
+        private void Canvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            currentRectangle = null;
+        }
+
+        private void Canvas_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (currentRectangle != null && e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point endPoint = e.GetPosition(canvas);
+                double width = Math.Abs(endPoint.X - startPoint.X);
+                double height = Math.Abs(endPoint.Y - startPoint.Y);
+                Canvas.SetLeft(currentRectangle, Math.Min(startPoint.X, endPoint.X));
+                Canvas.SetTop(currentRectangle, Math.Min(startPoint.Y, endPoint.Y));
+                currentRectangle.Width = width;
+                currentRectangle.Height = height;
+            }
+        }
+
+        private void Rectangle_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                startPoint = e.GetPosition(canvas);
+                currentRectangle = sender as Rectangle;
+                Canvas.SetZIndex(currentRectangle, canvas.Children.Count);
+            }
+        }
+
+        private void Canvas_MouseMove_1(object sender, MouseEventArgs e)
+        {
+            if (currentRectangle != null && e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point endPoint = e.GetPosition(canvas);
+                double deltaX = endPoint.X - startPoint.X;
+                double deltaY = endPoint.Y - startPoint.Y;
+                Canvas.SetLeft(currentRectangle, Canvas.GetLeft(currentRectangle) + deltaX);
+                Canvas.SetTop(currentRectangle, Canvas.GetTop(currentRectangle) + deltaY);
+                startPoint = endPoint;
+            }
+        }
+
+        private void Rectangle_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            currentRectangle = null;
+        }
+
+        private void Rectangle_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            Rectangle rectangle = sender as Rectangle;
+            if (rectangle != null)
+            {
+                canvas.Children.Remove(rectangle);
+            }
+        }
+
+        private void ColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        {
+            if (currentRectangle != null)
+            {
+                Color color = e.NewValue ?? Colors.Transparent;
+                currentRectangle.Fill = new SolidColorBrush(color);
+            }
+        }
+
+        private void ResizeRectangle(object sender, MouseButtonEventArgs e)
+        {
+            if (currentRectangle != null)
+            {
+                Point endPoint = e.GetPosition(canvas);
+                ResizeMode resizeMode = GetResizeMode(currentRectangle, endPoint);
+                ResizeRectangle(currentRectangle, startPoint, endPoint, resizeMode);
+            }
+        }
+
+        private ResizeMode GetResizeMode(Rectangle rectangle, Point point)
+        {
+            double left = Canvas.GetLeft(rectangle);
+            double top = Canvas.GetTop(rectangle);
+            double right = left + rectangle.Width;
+            double bottom = top + rectangle.Height;
+            if (point.X < left + 10 && point.Y < top + 10)
+            {
+                return ResizeMode.TopLeft
+        }
+        else if (point.X > right - 10 && point.Y < top + 10)
+        {
+            return ResizeMode.TopRight;
+        }
+        else if (point.X > right - 10 && point.Y > bottom - 10)
+        {
+            return ResizeMode.BottomRight;
+        }
+        else if (point.X < left + 10 && point.Y > bottom - 10)
+        {
+            return ResizeMode.BottomLeft;
+        }
+        else if (point.X < left + 10)
+        {
+            return ResizeMode.Left;
+        }
+        else if (point.X > right - 10)
+        {
+            return ResizeMode.Right;
+        }
+        else if (point.Y < top + 10)
+        {
+            return ResizeMode.Top;
+        }
+        else if (point.Y > bottom - 10)
+        {
+            return ResizeMode.Bottom;
+        }
+        else
+        {
+            return ResizeMode.None;
+        }
+    }
+
+    private void ResizeRectangle(Rectangle rectangle, Point startPoint, Point endPoint, ResizeMode resizeMode)
+    {
+        double deltaHorizontal = endPoint.X - startPoint.X;
+        double deltaVertical = endPoint.Y - startPoint.Y;
+
+        switch (resizeMode)
+        {
+            case ResizeMode.Left:
+                rectangle.Width -= deltaHorizontal;
+                Canvas.SetLeft(rectangle, Canvas.GetLeft(rectangle) + deltaHorizontal);
+                break;
+            case ResizeMode.TopLeft:
+                rectangle.Width -= deltaHorizontal;
+                rectangle.Height -= deltaVertical;
+                Canvas.SetLeft(rectangle, Canvas.GetLeft(rectangle) + deltaHorizontal);
+                Canvas.SetTop(rectangle, Canvas.GetTop(rectangle) + deltaVertical);
+                break;
+            case ResizeMode.Top:
+                rectangle.Height -= deltaVertical;
+                Canvas.SetTop(rectangle, Canvas.GetTop(rectangle) + deltaVertical);
+                break;
+            case ResizeMode.TopRight:
+                rectangle.Width += deltaHorizontal;
+                rectangle.Height -= deltaVertical;
+                Canvas.SetTop(rectangle, Canvas.GetTop(rectangle) + deltaVertical);
+                break;
+            case ResizeMode.Right:
+                rectangle.Width += deltaHorizontal;
+                break;
+            case ResizeMode.BottomRight:
+                rectangle.Width += deltaHorizontal;
+                rectangle.Height += deltaVertical;
+                break;
+            case ResizeMode.Bottom:
+                rectangle.Height += deltaVertical;
+                break;
+            case ResizeMode.BottomLeft:
+                rectangle.Width -= deltaHorizontal;
+                rectangle.Height += deltaVertical;
+                Canvas.SetLeft(rectangle, Canvas.GetLeft(rectangle) + deltaHorizontal);
+                break;
+            default:
+                break;
+        }
+
+        startPoint = endPoint;
+    }
+
+    private void SaveButton_Click(object sender, RoutedEventArgs e)
+    {
+        Rect bounds = VisualTreeHelper.GetDescendantBounds(canvas);
+        RenderTargetBitmap rtb = new RenderTargetBitmap((int)bounds.Width, (int)bounds.Height, 96, 96, PixelFormats.Pbgra32);
+        rtb.Render(canvas);
+
+        SaveFileDialog saveFileDialog = new SaveFileDialog();
+        saveFileDialog.Filter = "PNG Files (*.png)|*.png|All Files (*.*)|*.*";
+        if (saveFileDialog.ShowDialog() == true)
+        {
+            using (FileStream fileStream = new FileStream(saveFileDialog.FileName, FileMode.Create))
+            {
+                PngBitmapEncoder encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(rtb));
+                encoder.Save(fileStream);
+            }
+        }
+    }
+
+    private void LoadButton_Click(object sender, RoutedEventArgs e)
+    {
+        OpenFileDialog openFileDialog = new OpenFileDialog();
+        openFileDialog.Filter = "Image Files (*.bmp;*.jpg;*.jpeg,*.png)|*.bmp;*.jpg;*.jpeg;*.png|All Files (*.*)|*.*";
+        if (openFileDialog.ShowDialog() == true)
+        {
+            
+            Bitmap  image = new Bitmap(openFileDialog.FileName);
+            ImageBrush imageBrush = new ImageBrush();
+            imageBrush.ImageSource = Imaging.CreateBitmapSourceFromHBitmap(
+            image.GetHbitmap(),
+            IntPtr.Zero,
+            Int32Rect.Empty,
+            BitmapSizeOptions.FromEmptyOptions());
+            canvas.Background = imageBrush;
+        }
+    }
+}
+public enum ResizeMode
+{
+    None,
+    Left,
+    TopLeft,
+    Top,
+    TopRight,
+    Right,
+    BottomRight,
+    Bottom,
+    BottomLeft
+}
+}
